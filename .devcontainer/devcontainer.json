@@ -1,7 +1,6 @@
 {
     "name": "Micro-ROS ESP-IDF",
-    "image": "microros-esp-idf-latest",
-    // "dockerFile": "Dockerfile",
+    "image": "barisyazici747/microros-esp-idf-v5.3-dev-1162-gee3a46dbc3",
     "forwardPorts": [
         8080
     ],
@@ -10,7 +9,7 @@
     },
     "mounts": [
         "source=/etc/timezone,target=/etc/timezone,type=bind,consistency=cached,readonly",
-        "source=/home/yazi_ba/micro_ros_espidf_component,target=/micro_ros_espidf_component,type=bind,consistency=cached",
+        "source=../,target=/micro_ros_espidf_component,type=bind,consistency=cached",
         "source=/dev,target=/dev,type=bind,consistency=cached"
     ],
     "runArgs": [
