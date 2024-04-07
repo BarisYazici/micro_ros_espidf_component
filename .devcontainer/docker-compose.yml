@@ -1,0 +1,17 @@
+version: '2'
+services:
+  micro-ros-esp-idf:
+    image: barisyazici747/microros-esp-idf-v5.3-dev-1162-gee3a46dbc3
+    volumes:
+      - /etc/timezone:/etc/timezone:ro
+      - ../:/micro_ros_espidf_component
+      - /dev:/dev
+    privileged: true
+    command: /bin/bash
+    tty: true
+    stdin_open: true
+    environment:
+      - ROS_DOMAIN_ID=100
+    command: /bin/bash -c "echo 'Devcontainer for Micro-ROS ESP-IDF is ready!'"
+    privileged: true
+    network_mode: host
