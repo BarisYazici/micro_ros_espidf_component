@@ -75,13 +75,12 @@ static inline uint32_t example_angle_to_compare(int angle)
     return (angle - SERVO_MIN_DEGREE) * (SERVO_MAX_PULSEWIDTH_US - SERVO_MIN_PULSEWIDTH_US) / (SERVO_MAX_DEGREE - SERVO_MIN_DEGREE) + SERVO_MIN_PULSEWIDTH_US;
 }
 
-void servo_control_service_callback(const void *req, void *res)
+void servo_control_subscriber_callback(const void *msg)
 {
-    umi_robot_msgs__srv__ControlServo_Request *req_in = (umi_robot_msgs__srv__ControlServo_Request *)req;
-    umi_robot_msgs__srv__ControlServo_Response *res_in = (umi_robot_msgs__srv__ControlServo_Response *)res;
+    umi_robot_msgs__msg__JointStates *msg_in = (umi_robot_msgs__msg__JointStates *)msg;
     ESP_LOGI(TAG, "Entered the callback function:");
 
-    float motor_positions[4] = {req_in->motor_1, req_in->motor_2, req_in->motor_3, req_in->motor_4};
+    float motor_positions[4] = {msg_in->motor_1, msg_in->motor_2, msg_in->motor_3, msg_in->motor_4};
 
     // Loop over the servo_positions array
     for (int i = 0; i < 4; i++) {
@@ -92,7 +91,6 @@ void servo_control_service_callback(const void *req, void *res)
         ESP_LOGI(TAG, "Compare value: %lu", compare_value);
         ESP_ERROR_CHECK(mcpwm_comparator_set_compare_value(comparator[i], compare_value));
     }
-    res_in->success = true;
 }
 
 void micro_ros_task(void *arg)
@@ -121,28 +119,43 @@ void micro_ros_task(void *arg)
     RCCHECK(rclc_node_init_default(&node, "servo_drive_client_rclc", "", &support));
 
     // create service
-    rcl_service_t service;
-    RCCHECK(rclc_service_init_default(&service, &node, ROSIDL_GET_SRV_TYPE_SUPPORT(umi_robot_msgs, srv, ControlServo), "/set_servo_angle"));
+    // rcl_service_t service;
+    // RCCHECK(rclc_service_init_default(&service, &node, ROSIDL_GET_SRV_TYPE_SUPPORT(umi_robot_msgs, srv, ControlServo), "/set_servo_angle"));
 
-    // // create executor
+    // create subscriber
+    rcl_subscription_t subscriber;
+    RCCHECK(rclc_subscription_init_default(
+        &subscriber,
+        &node,
+        ROSIDL_GET_MSG_TYPE_SUPPORT(umi_robot_msgs, msg, JointStates),
+        "/set_servo_angle"
+    ));
+    // create executor
     rclc_executor_t executor;
     RCCHECK(rclc_executor_init(&executor, &support.context, 1, &allocator));
 
 
-    umi_robot_msgs__srv__ControlServo_Response res;
-    umi_robot_msgs__srv__ControlServo_Request req;
-    RCCHECK(rclc_executor_add_service(&executor, &service, &req, &res, servo_control_service_callback));
+    // create message
+    // umi_robot_msgs__msg__ControlServo msg;
+    umi_robot_msgs__msg__JointStates msg;
+
+    // add subscriber to executor
+    RCCHECK(rclc_executor_add_subscription(&executor, &subscriber, &msg, &servo_control_subscriber_callback, ON_NEW_DATA));
+
+    // umi_robot_msgs__srv__ControlServo_Response res;
+    // umi_robot_msgs__srv__ControlServo_Request req;
+    // RCCHECK(rclc_executor_add_service(&executor, &service, &req, &res, servo_control_service_callback));
    
     // Spin forever
     while (1)
     {
         rclc_executor_spin_some(&executor, RCL_MS_TO_NS(1));
 
-        usleep(1000);
+        usleep(1);
     }
 
     // Free resources
-    RCCHECK(rcl_service_fini(&service, &node));
+    RCCHECK(rcl_subscription_fini(&subscriber, &node));
     RCCHECK(rcl_node_fini(&node));
 }
 
